@@ -5,8 +5,10 @@ import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.time.Duration;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 
 /**
  * Получает данные о пакетах из репозитория NuGet по протоколу HTTP.
@@ -25,6 +27,7 @@ public class NuGetClient {
 
     private final HttpClient httpClient;
     private final NuGetParser parser = new NuGetParser();
+    private final Map<String, String> baseAddresses = new HashMap<>();
 
     /**
      * Создаёт клиента с ограничением времени ожидания и переходом по перенаправлениям.
@@ -47,12 +50,48 @@ public class NuGetClient {
      */
     public List<Dependency> getDependencies(String indexUrl, String packageName, String packageVersion)
             throws NuGetException {
-        String index = download(indexUrl, "индекс репозитория не найден по адресу " + indexUrl);
-        String baseAddress = parser.findBaseAddress(index);
+        String baseAddress = findBaseAddress(indexUrl);
         String nuspecUrl = buildNuspecUrl(baseAddress, packageName, packageVersion);
         String notFound = "пакет " + packageName + " версии " + packageVersion + " не найден в репозитории";
         String nuspec = download(nuspecUrl, notFound);
         return parser.parseDependencies(nuspec);
+    }
+
+    /**
+     * Возвращает все версии пакета от самой старой к самой новой.
+     *
+     * @param indexUrl    адрес индекса сервисов
+     * @param packageName идентификатор пакета
+     * @return список версий
+     * @throws NuGetException нет связи с сервером, пакета нет, ответ непонятен
+     */
+    public List<String> getVersions(String indexUrl, String packageName) throws NuGetException {
+        String base = withSlash(findBaseAddress(indexUrl));
+        String id = packageName.toLowerCase(Locale.ROOT);
+        String notFound = "пакет " + packageName + " не найден в репозитории";
+        return parser.parseVersions(download(base + id + "/index.json", notFound));
+    }
+
+    /**
+     * Возвращает адрес хранилища пакетов. Индекс скачивается один раз, дальше берётся из памяти:
+     * при построении графа запросов много, а индекс всё время одинаковый.
+     */
+    private String findBaseAddress(String indexUrl) throws NuGetException {
+        String cached = baseAddresses.get(indexUrl);
+        if (cached != null) {
+            return cached;
+        }
+        String index = download(indexUrl, "индекс репозитория не найден по адресу " + indexUrl);
+        String baseAddress = parser.findBaseAddress(index);
+        baseAddresses.put(indexUrl, baseAddress);
+        return baseAddress;
+    }
+
+    /**
+     * Добавляет косую черту в конец адреса, если её там нет.
+     */
+    private static String withSlash(String address) {
+        return address.endsWith("/") ? address : address + "/";
     }
 
     /**
@@ -66,8 +105,7 @@ public class NuGetClient {
      */
     static String buildNuspecUrl(String baseAddress, String name, String version) {
         String id = name.toLowerCase(Locale.ROOT);
-        String base = baseAddress.endsWith("/") ? baseAddress : baseAddress + "/";
-        return base + id + "/" + normalizeVersion(version) + "/" + id + ".nuspec";
+        return withSlash(baseAddress) + id + "/" + normalizeVersion(version) + "/" + id + ".nuspec";
     }
 
     /**

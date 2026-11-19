@@ -10,6 +10,7 @@ import java.net.InetSocketAddress;
 import java.net.ServerSocket;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicInteger;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -29,6 +30,7 @@ class NuGetClientTest {
             + "<dependency id=\"Dep.Two\" version=\"[2.0, )\" /></group>"
             + "</dependencies></metadata></package>";
 
+    private final AtomicInteger indexRequests = new AtomicInteger();
     private HttpServer server;
     private int port;
 
@@ -38,7 +40,12 @@ class NuGetClientTest {
         port = server.getAddress().getPort();
         String index = "{\"resources\":[{\"@id\":\"http://127.0.0.1:" + port + "/flat/\","
                 + "\"@type\":\"PackageBaseAddress/3.0.0\"}]}";
-        server.createContext("/index.json", exchange -> respond(exchange, OK, index));
+        server.createContext("/index.json", exchange -> {
+            indexRequests.incrementAndGet();
+            respond(exchange, OK, index);
+        });
+        server.createContext("/flat/foo/index.json",
+                exchange -> respond(exchange, OK, "{\"versions\":[\"1.0.0\",\"2.0.0\"]}"));
         server.createContext("/flat/newtonsoft.json/13.0.3/newtonsoft.json.nuspec",
                 exchange -> respond(exchange, OK, NUSPEC));
         server.createContext("/flat/foo/1.0.0/foo.nuspec", exchange -> respond(exchange, OK, NUSPEC));
@@ -83,6 +90,26 @@ class NuGetClientTest {
         assertEquals(2, result.size());
         assertEquals("Dep.One", result.get(0).getId());
         assertEquals("Dep.Two", result.get(1).getId());
+    }
+
+    @Test
+    void indexIsDownloadedOnlyOnce() throws Exception {
+        NuGetClient client = new NuGetClient();
+        client.getDependencies(url("/index.json"), "Foo", "1.0.0");
+        client.getDependencies(url("/index.json"), "Newtonsoft.Json", "13.0.3");
+        client.getVersions(url("/index.json"), "Foo");
+        assertEquals(1, indexRequests.get());
+    }
+
+    @Test
+    void returnsVersionsOfPackage() throws Exception {
+        List<String> versions = new NuGetClient().getVersions(url("/index.json"), "Foo");
+        assertEquals(List.of("1.0.0", "2.0.0"), versions);
+    }
+
+    @Test
+    void versionsOfUnknownPackageIsError() {
+        assertError("не найден", () -> new NuGetClient().getVersions(url("/index.json"), "Nope"));
     }
 
     @Test

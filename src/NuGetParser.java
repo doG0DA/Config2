@@ -28,6 +28,8 @@ public class NuGetParser {
 
     private static final String BASE_ADDRESS_TYPE = "\"PackageBaseAddress/3.0.0\"";
     private static final Pattern RESOURCE_ID = Pattern.compile("\"@id\"\\s*:\\s*\"([^\"]+)\"");
+    private static final Pattern VERSIONS_ARRAY = Pattern.compile("\"versions\"\\s*:\\s*\\[([^\\]]*)\\]");
+    private static final Pattern QUOTED = Pattern.compile("\"([^\"]+)\"");
     private static final String NO_DOCTYPE = "http://apache.org/xml/features/disallow-doctype-decl";
     private static final String BOM = "﻿";
 
@@ -85,6 +87,26 @@ public class NuGetParser {
             i++;
         }
         return i;
+    }
+
+    /**
+     * Достаёт список версий пакета из ответа вида {"versions":["1.0.0","1.0.1"]}.
+     *
+     * @param json текст ответа
+     * @return версии в том порядке, в котором они перечислены (от старой к новой)
+     * @throws NuGetException если в ответе нет списка версий
+     */
+    public List<String> parseVersions(String json) throws NuGetException {
+        Matcher array = VERSIONS_ARRAY.matcher(json);
+        if (!array.find()) {
+            throw new NuGetException("в ответе репозитория нет списка версий");
+        }
+        List<String> versions = new ArrayList<>();
+        Matcher item = QUOTED.matcher(array.group(1));
+        while (item.find()) {
+            versions.add(item.group(1));
+        }
+        return versions;
     }
 
     /**

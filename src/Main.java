@@ -1,8 +1,7 @@
 import java.util.List;
 
 /**
- * Точка входа: читает настройки, получает из репозитория NuGet прямые зависимости пакета
- * и выводит их на экран.
+ * Точка входа: читает настройки, строит граф зависимостей пакета и выводит его на экран.
  */
 public class Main {
 
@@ -31,31 +30,72 @@ public class Main {
     }
 
     /**
-     * Получает и печатает зависимости. Тестовый репозиторий появится на этапе 3.
+     * Выбирает источник данных, строит граф и печатает результат.
      */
-    private static void run(Config config) throws NuGetException {
-        if (config.isTestMode()) {
-            System.out.println("Тестовый режим будет добавлен на этапе 3.");
-            return;
+    private static void run(Config config) throws ConfigException, NuGetException {
+        String name = config.getPackageName();
+        PackageFilter filter = new PackageFilter(config.getFilterSubstring());
+        if (filter.isExcluded(name)) {
+            throw new ConfigException("filter_substring: имя корневого пакета " + name
+                    + " содержит подстроку '" + filter.getSubstring() + "', анализировать нечего");
         }
-        List<Dependency> dependencies = new NuGetClient().getDependencies(
-                config.getRepository(), config.getPackageName(), config.getPackageVersion());
-        printDependencies(config, dependencies);
+        PackageSource source = createSource(config);
+        Dependency root = new Dependency(name, config.getPackageVersion());
+        DependencyGraph graph = new GraphBuilder().build(source, root, filter);
+        printGraph(graph, config, filter);
     }
 
     /**
-     * Печатает заголовок и список прямых зависимостей.
+     * Создаёт источник данных: тестовый файл или настоящий репозиторий NuGet.
      */
-    private static void printDependencies(Config config, List<Dependency> dependencies) {
-        System.out.println("Пакет: " + config.getPackageName() + " " + config.getPackageVersion());
-        if (dependencies.isEmpty()) {
-            System.out.println("Прямых зависимостей нет.");
+    private static PackageSource createSource(Config config) throws NuGetException {
+        if (config.isTestMode()) {
+            TestRepository repository = TestRepository.load(config.getRepository());
+            repository.requirePackage(config.getPackageName());
+            return repository;
+        }
+        return new NuGetSource(new NuGetClient(), config.getRepository());
+    }
+
+    /**
+     * Печатает граф: для каждого пакета список его прямых зависимостей, затем найденные циклы.
+     */
+    private static void printGraph(DependencyGraph graph, Config config, PackageFilter filter) {
+        String title = config.getPackageName();
+        if (!config.isTestMode()) {
+            title = title + " " + config.getPackageVersion();
+        }
+        System.out.println("Граф зависимостей пакета " + title
+                + " (пакетов: " + graph.nodeCount() + ", связей: " + graph.edgeCount() + ")");
+        if (filter.isActive()) {
+            System.out.println("Фильтр: пакеты, в имени которых есть '" + filter.getSubstring() + "', пропущены");
+        }
+        for (String node : graph.getNodes()) {
+            System.out.println("  " + node + " -> " + describe(graph.getDependencies(node)));
+        }
+        printCycles(graph.findCycleEdges());
+    }
+
+    /**
+     * Печатает найденные циклические зависимости.
+     */
+    private static void printCycles(List<String> cycleEdges) {
+        if (cycleEdges.isEmpty()) {
+            System.out.println("Циклических зависимостей нет.");
             return;
         }
-        System.out.println("Прямые зависимости (" + dependencies.size() + "):");
-        for (Dependency dependency : dependencies) {
-            System.out.println("  " + dependency);
+        System.out.println("Циклические зависимости (связи, которые лежат на цикле): "
+                + String.join(", ", cycleEdges));
+    }
+
+    /**
+     * Превращает список зависимостей в текст для вывода.
+     */
+    private static String describe(List<String> dependencies) {
+        if (dependencies.isEmpty()) {
+            return "(нет зависимостей)";
         }
+        return String.join(", ", dependencies);
     }
 
     /**

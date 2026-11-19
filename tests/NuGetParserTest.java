@@ -53,6 +53,22 @@ class NuGetParserTest {
     }
 
     @Test
+    void parsesVersionsList() throws Exception {
+        assertEquals(List.of("1.0.0", "1.1.0-beta"),
+                parser.parseVersions("{\n  \"versions\": [\n    \"1.0.0\",\n    \"1.1.0-beta\"\n  ]\n}"));
+    }
+
+    @Test
+    void emptyVersionsListIsEmpty() throws Exception {
+        assertTrue(parser.parseVersions("{\"versions\":[]}").isEmpty());
+    }
+
+    @Test
+    void missingVersionsListIsError() {
+        assertError("списка версий", () -> parser.parseVersions("{}"));
+    }
+
+    @Test
     void missingBaseAddressIsError() {
         String index = "{\"resources\":[{\"@id\":\"https://x/query\",\"@type\":\"SearchQueryService\"}]}";
         assertError("PackageBaseAddress", () -> parser.findBaseAddress(index));
