@@ -3,9 +3,7 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-import java.io.ByteArrayOutputStream;
 import java.io.IOException;
-import java.io.PrintStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import org.junit.jupiter.api.Test;
@@ -78,17 +76,6 @@ class ConfigReaderTest {
     void skipsCommentsAndBlankLines() throws Exception {
         String file = writeFile("; комментарий\n\n# ещё один\n" + ini("A.B", GOOD_URL, "false", "1.0"));
         assertEquals("A.B", new ConfigReader().read(file).getPackageName());
-    }
-
-    @Test
-    void printsAllParameters() throws Exception {
-        String file = writeFile(ini("Newtonsoft.Json", GOOD_URL, "false", "13.0.3"));
-        ByteArrayOutputStream bytes = new ByteArrayOutputStream();
-        new ConfigReader().read(file).printTo(new PrintStream(bytes, true));
-        String text = bytes.toString();
-        assertTrue(text.contains("package_name = Newtonsoft.Json"));
-        assertTrue(text.contains("test_mode = false"));
-        assertTrue(text.contains("package_version = 13.0.3"));
     }
 
     @Test

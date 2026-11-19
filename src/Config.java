@@ -1,5 +1,3 @@
-import java.io.PrintStream;
-
 /**
  * Настройки программы, которые задаёт пользователь.
  */
@@ -13,7 +11,7 @@ public class Config {
 
     /**
      * Создаёт набор настроек.
-
+     *
      * @param packageName     имя анализируемого пакета
      * @param repository      URL репозитория или путь к файлу тестового репозитория
      * @param testMode        работаем ли с тестовым репозиторием
@@ -72,18 +70,5 @@ public class Config {
      */
     public String getFilterSubstring() {
         return filterSubstring;
-    }
-
-    /**
-     * Печатает все настройки в формате «ключ = значение».
-     *
-     * @param out куда печатать
-     */
-    public void printTo(PrintStream out) {
-        out.println("package_name = " + packageName);
-        out.println("repository = " + repository);
-        out.println("test_mode = " + testMode);
-        out.println("package_version = " + packageVersion);
-        out.println("filter_substring = " + filterSubstring);
     }
 }
