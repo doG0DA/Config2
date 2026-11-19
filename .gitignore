@@ -1,0 +1,14 @@
+# Артефакты сборки
+out/
+*.class
+
+# Настройки редакторов и IDE
+.idea/
+*.iml
+.vscode/
+
+# Архивы и служебные файлы
+*.zip
+*.jar
+.DS_Store
+Thumbs.db
