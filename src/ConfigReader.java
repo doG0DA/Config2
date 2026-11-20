@@ -19,11 +19,12 @@ public class ConfigReader {
     private static final String KEY_TEST_MODE = "test_mode";
     private static final String KEY_VERSION = "package_version";
     private static final String KEY_FILTER = "filter_substring";
+    private static final String KEY_OUTPUT_MODE = "output_mode";
 
     private static final List<String> REQUIRED_KEYS =
             List.of(KEY_PACKAGE, KEY_REPOSITORY, KEY_TEST_MODE, KEY_VERSION);
     private static final List<String> ALL_KEYS =
-            List.of(KEY_PACKAGE, KEY_REPOSITORY, KEY_TEST_MODE, KEY_VERSION, KEY_FILTER);
+            List.of(KEY_PACKAGE, KEY_REPOSITORY, KEY_TEST_MODE, KEY_VERSION, KEY_FILTER, KEY_OUTPUT_MODE);
 
     /**
      * Читает файл, проверяет настройки и возвращает их.
@@ -46,7 +47,8 @@ public class ConfigReader {
         checkVersion(version);
 
         String filter = values.getOrDefault(KEY_FILTER, "");
-        return new Config(name, repository, testMode, version, filter);
+        OutputMode outputMode = parseOutputMode(values.get(KEY_OUTPUT_MODE));
+        return new Config(name, repository, testMode, version, filter, outputMode);
     }
 
     /**
@@ -127,6 +129,20 @@ public class ConfigReader {
             return false;
         }
         throw new ConfigException(KEY_TEST_MODE + ": нужно true или false, а не '" + value + "'");
+    }
+
+    /**
+     * Определяет режим вывода. Параметр необязательный: если его нет, печатается граф.
+     */
+    private OutputMode parseOutputMode(String value) throws ConfigException {
+        if (value == null) {
+            return OutputMode.GRAPH;
+        }
+        OutputMode mode = OutputMode.fromKeyword(value);
+        if (mode == null) {
+            throw new ConfigException(KEY_OUTPUT_MODE + ": нужно graph или load_order, а не '" + value + "'");
+        }
+        return mode;
     }
 
     /**

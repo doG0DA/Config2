@@ -8,6 +8,7 @@ public class Config {
     private final boolean testMode;
     private final String packageVersion;
     private final String filterSubstring;
+    private final OutputMode outputMode;
 
     /**
      * Создаёт набор настроек.
@@ -17,14 +18,16 @@ public class Config {
      * @param testMode        работаем ли с тестовым репозиторием
      * @param packageVersion  версия пакета
      * @param filterSubstring подстрока для фильтрации пакетов (может быть пустой)
+     * @param outputMode      что печатать: граф или порядок загрузки
      */
     public Config(String packageName, String repository, boolean testMode,
-                  String packageVersion, String filterSubstring) {
+                  String packageVersion, String filterSubstring, OutputMode outputMode) {
         this.packageName = packageName;
         this.repository = repository;
         this.testMode = testMode;
         this.packageVersion = packageVersion;
         this.filterSubstring = filterSubstring;
+        this.outputMode = outputMode;
     }
 
     /**
@@ -70,5 +73,14 @@ public class Config {
      */
     public String getFilterSubstring() {
         return filterSubstring;
+    }
+
+    /**
+     * Возвращает режим вывода результата.
+     *
+     * @return граф или порядок загрузки
+     */
+    public OutputMode getOutputMode() {
+        return outputMode;
     }
 }

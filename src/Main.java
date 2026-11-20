@@ -40,9 +40,14 @@ public class Main {
                     + " содержит подстроку '" + filter.getSubstring() + "', анализировать нечего");
         }
         PackageSource source = createSource(config);
-        Dependency root = new Dependency(name, config.getPackageVersion());
+        String rootVersion = config.isTestMode() ? "" : config.getPackageVersion();
+        Dependency root = new Dependency(name, rootVersion);
         DependencyGraph graph = new GraphBuilder().build(source, root, filter);
-        printGraph(graph, config, filter);
+        if (config.getOutputMode() == OutputMode.LOAD_ORDER) {
+            printLoadOrder(graph, config, filter);
+        } else {
+            printGraph(graph, config, filter);
+        }
     }
 
     /**
@@ -61,11 +66,7 @@ public class Main {
      * Печатает граф: для каждого пакета список его прямых зависимостей, затем найденные циклы.
      */
     private static void printGraph(DependencyGraph graph, Config config, PackageFilter filter) {
-        String title = config.getPackageName();
-        if (!config.isTestMode()) {
-            title = title + " " + config.getPackageVersion();
-        }
-        System.out.println("Граф зависимостей пакета " + title
+        System.out.println("Граф зависимостей пакета " + title(config)
                 + " (пакетов: " + graph.nodeCount() + ", связей: " + graph.edgeCount() + ")");
         if (filter.isActive()) {
             System.out.println("Фильтр: пакеты, в имени которых есть '" + filter.getSubstring() + "', пропущены");
@@ -74,6 +75,43 @@ public class Main {
             System.out.println("  " + node + " -> " + describe(graph.getDependencies(node)));
         }
         printCycles(graph.findCycleEdges());
+    }
+
+    /**
+     * Печатает порядок загрузки: сначала зависимости, потом пакеты, которые от них зависят.
+     * Корневой пакет идёт последним.
+     */
+    private static void printLoadOrder(DependencyGraph graph, Config config, PackageFilter filter) {
+        LoadOrder loadOrder = new LoadOrderCalculator().calculate(graph);
+        List<String> order = loadOrder.getOrder();
+        System.out.println("Порядок загрузки пакета " + title(config)
+                + " (сначала зависимости, потом сам пакет). Пакетов: " + order.size());
+        if (filter.isActive()) {
+            System.out.println("Фильтр: пакеты, в имени которых есть '" + filter.getSubstring() + "', пропущены");
+        }
+        for (int i = 0; i < order.size(); i++) {
+            String name = order.get(i);
+            String version = graph.getVersion(name);
+            String label = version.isEmpty() ? name : name + " " + version;
+            String mark = loadOrder.isInCycle(name) ? " (в цикле)" : "";
+            System.out.println(String.format("%4d. ", i + 1) + label + mark);
+        }
+        if (loadOrder.getCyclePackages().isEmpty()) {
+            System.out.println("Циклических зависимостей нет, порядок строгий.");
+        } else {
+            System.out.println("Внимание: найдены циклические зависимости. Порядок пакетов, помеченных «в цикле»,"
+                    + " определить нельзя, он показан условно.");
+        }
+    }
+
+    /**
+     * Возвращает название пакета для заголовка: в обычном режиме с версией.
+     */
+    private static String title(Config config) {
+        if (config.isTestMode()) {
+            return config.getPackageName();
+        }
+        return config.getPackageName() + " " + config.getPackageVersion();
     }
 
     /**

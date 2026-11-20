@@ -32,6 +32,7 @@ public class GraphBuilder {
         Set<String> visited = new HashSet<>();
 
         graph.addNode(root.getId());
+        graph.setVersion(root.getId(), VersionRange.lowerBound(root.getVersionRange()));
         visited.add(DependencyGraph.key(root.getId()));
         queue.add(root);
 
@@ -43,6 +44,7 @@ public class GraphBuilder {
                 }
                 graph.addEdge(current.getId(), dependency.getId());
                 if (visited.add(DependencyGraph.key(dependency.getId()))) {
+                    graph.setVersion(dependency.getId(), VersionRange.lowerBound(dependency.getVersionRange()));
                     queue.add(dependency);
                 }
             }

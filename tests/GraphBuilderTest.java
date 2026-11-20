@@ -103,6 +103,18 @@ class GraphBuilderTest {
     }
 
     @Test
+    void remembersVersionOfEachPackage() throws Exception {
+        PackageSource source = pkg -> pkg.getId().equals("A")
+                ? List.of(new Dependency("B", "[2.0.0, )"), new Dependency("C", "3.1"))
+                : List.of();
+        DependencyGraph graph = new GraphBuilder()
+                .build(source, new Dependency("A", "1.0.0"), new PackageFilter(""));
+        assertEquals("1.0.0", graph.getVersion("A"));
+        assertEquals("2.0.0", graph.getVersion("B"));
+        assertEquals("3.1", graph.getVersion("C"));
+    }
+
+    @Test
     void emptyFilterRemovesNothing() throws Exception {
         DependencyGraph graph = build(new FakeSource().with("A", "B"), "");
         assertEquals(2, graph.nodeCount());

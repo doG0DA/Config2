@@ -65,6 +65,23 @@ class ConfigReaderTest {
     }
 
     @Test
+    void outputModeIsGraphByDefault() throws Exception {
+        String file = writeFile(ini("Newtonsoft.Json", GOOD_URL, "false", "13.0.3"));
+        assertEquals(OutputMode.GRAPH, new ConfigReader().read(file).getOutputMode());
+    }
+
+    @Test
+    void readsLoadOrderMode() throws Exception {
+        String file = writeFile(ini("A.B", GOOD_URL, "false", "1.0") + "output_mode = Load_Order\n");
+        assertEquals(OutputMode.LOAD_ORDER, new ConfigReader().read(file).getOutputMode());
+    }
+
+    @Test
+    void badOutputModeIsError() throws Exception {
+        assertError("graph или load_order", writeFile(ini("A", GOOD_URL, "false", "1.0") + "output_mode = list\n"));
+    }
+
+    @Test
     void readsTestModeConfig() throws Exception {
         Path repo = dir.resolve("repo.txt");
         Files.writeString(repo, "A: B\n");

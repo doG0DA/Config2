@@ -39,6 +39,21 @@ class DependencyGraphTest {
     }
 
     @Test
+    void firstVersionOfPackageIsKept() {
+        DependencyGraph graph = new DependencyGraph();
+        graph.addNode("Foo");
+        graph.setVersion("Foo", "1.0.0");
+        graph.setVersion("foo", "2.0.0");
+        assertEquals("1.0.0", graph.getVersion("FOO"));
+        assertEquals("", graph.getVersion("Unknown"));
+    }
+
+    @Test
+    void edgeTextHasArrow() {
+        assertEquals("A -> B", DependencyGraph.edgeText("A", "B"));
+    }
+
+    @Test
     void unknownPackageHasNoDependencies() {
         assertTrue(new DependencyGraph().getDependencies("X").isEmpty());
     }

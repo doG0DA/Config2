@@ -1,6 +1,7 @@
 import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Deque;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -18,6 +19,7 @@ public class DependencyGraph {
 
     private final Map<String, String> names = new LinkedHashMap<>();
     private final Map<String, List<String>> edges = new LinkedHashMap<>();
+    private final Map<String, String> versions = new HashMap<>();
 
     /**
      * Приводит имя пакета к ключу: имена сравниваются без учёта регистра.
@@ -27,6 +29,38 @@ public class DependencyGraph {
      */
     public static String key(String name) {
         return name.toLowerCase(Locale.ROOT);
+    }
+
+    /**
+     * Собирает текст стрелки: "A -> B". Так стрелки записываются в результатах и сравниваются.
+     *
+     * @param from пакет, у которого есть зависимость
+     * @param to   пакет, от которого он зависит
+     * @return строка вида "A -> B"
+     */
+    public static String edgeText(String from, String to) {
+        return from + " -> " + to;
+    }
+
+    /**
+     * Запоминает версию пакета. Если версия уже была записана, остаётся первая: пакет в граф
+     * попадает по первому найденному пути.
+     *
+     * @param name    имя пакета
+     * @param version версия (пустая строка, если неизвестна)
+     */
+    public void setVersion(String name, String version) {
+        versions.putIfAbsent(key(name), version);
+    }
+
+    /**
+     * Возвращает версию пакета.
+     *
+     * @param name имя пакета
+     * @return версия или пустая строка, если она неизвестна
+     */
+    public String getVersion(String name) {
+        return versions.getOrDefault(key(name), "");
     }
 
     /**
@@ -111,7 +145,7 @@ public class DependencyGraph {
         for (Map.Entry<String, List<String>> entry : edges.entrySet()) {
             for (String target : entry.getValue()) {
                 if (canReach(target, entry.getKey())) {
-                    result.add(names.get(entry.getKey()) + " -> " + names.get(target));
+                    result.add(edgeText(names.get(entry.getKey()), names.get(target)));
                 }
             }
         }
