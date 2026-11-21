@@ -9,12 +9,6 @@ import java.util.List;
  */
 public interface PackageSource {
 
-    /**
-     * Возвращает прямые зависимости пакета.
-     *
-     * @param pkg пакет: идентификатор и версия (или диапазон версий)
-     * @return список прямых зависимостей (пустой, если их нет)
-     * @throws NuGetException если данные получить не удалось
-     */
+
     List<Dependency> getDependencies(Dependency pkg) throws NuGetException;
 }
