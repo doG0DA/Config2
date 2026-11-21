@@ -20,11 +20,14 @@ public class ConfigReader {
     private static final String KEY_VERSION = "package_version";
     private static final String KEY_FILTER = "filter_substring";
     private static final String KEY_OUTPUT_MODE = "output_mode";
+    private static final String KEY_IMAGE_FILE = "image_file";
+    private static final String KEY_D2_COMMAND = "d2_command";
+    private static final String KEY_SHOW_IMAGE = "show_image";
 
     private static final List<String> REQUIRED_KEYS =
             List.of(KEY_PACKAGE, KEY_REPOSITORY, KEY_TEST_MODE, KEY_VERSION);
-    private static final List<String> ALL_KEYS =
-            List.of(KEY_PACKAGE, KEY_REPOSITORY, KEY_TEST_MODE, KEY_VERSION, KEY_FILTER, KEY_OUTPUT_MODE);
+    private static final List<String> ALL_KEYS = List.of(KEY_PACKAGE, KEY_REPOSITORY, KEY_TEST_MODE,
+            KEY_VERSION, KEY_FILTER, KEY_OUTPUT_MODE, KEY_IMAGE_FILE, KEY_D2_COMMAND, KEY_SHOW_IMAGE);
 
     /**
      * Читает файл, проверяет настройки и возвращает их.
@@ -37,7 +40,7 @@ public class ConfigReader {
         Map<String, String> values = readFile(fileName);
         checkKeys(values);
 
-        boolean testMode = parseTestMode(values.get(KEY_TEST_MODE));
+        boolean testMode = parseBoolean(KEY_TEST_MODE, values.get(KEY_TEST_MODE));
         String name = values.get(KEY_PACKAGE);
         String repository = values.get(KEY_REPOSITORY);
         String version = values.get(KEY_VERSION);
@@ -47,8 +50,7 @@ public class ConfigReader {
         checkVersion(version);
 
         String filter = values.getOrDefault(KEY_FILTER, "");
-        OutputMode outputMode = parseOutputMode(values.get(KEY_OUTPUT_MODE));
-        return new Config(name, repository, testMode, version, filter, outputMode);
+        return new Config(name, repository, testMode, version, filter, readOutputOptions(values));
     }
 
     /**
@@ -112,27 +114,44 @@ public class ConfigReader {
             if (!values.containsKey(key)) {
                 throw new ConfigException("не задан параметр: " + key);
             }
-            if (values.get(key).isEmpty()) {
-                throw new ConfigException("пустое значение параметра: " + key);
+        }
+        for (Map.Entry<String, String> entry : values.entrySet()) {
+            if (!entry.getKey().equals(KEY_FILTER) && entry.getValue().isEmpty()) {
+                throw new ConfigException("пустое значение параметра: " + entry.getKey());
             }
         }
     }
 
     /**
-     * Превращает текст true или false в логическое значение.
+     * Превращает текст true или false в логическое значение. Ключ нужен для сообщения об ошибке.
      */
-    private boolean parseTestMode(String value) throws ConfigException {
+    private boolean parseBoolean(String key, String value) throws ConfigException {
         if (value.equalsIgnoreCase("true")) {
             return true;
         }
         if (value.equalsIgnoreCase("false")) {
             return false;
         }
-        throw new ConfigException(KEY_TEST_MODE + ": нужно true или false, а не '" + value + "'");
+        throw new ConfigException(key + ": нужно true или false, а не '" + value + "'");
     }
 
     /**
-     * Определяет режим вывода. Параметр необязательный: если его нет, печатается граф.
+     * Собирает настройки вывода. Все четыре параметра необязательные: по умолчанию печатается граф,
+     * картинка сохраняется в graph.svg, рисует её d2 из PATH, готовая картинка открывается на экране.
+     */
+    private OutputOptions readOutputOptions(Map<String, String> values) throws ConfigException {
+        OutputMode mode = parseOutputMode(values.get(KEY_OUTPUT_MODE));
+        String imageFile = values.getOrDefault(KEY_IMAGE_FILE, OutputOptions.DEFAULT_IMAGE_FILE);
+        String command = values.getOrDefault(KEY_D2_COMMAND, OutputOptions.DEFAULT_D2_COMMAND);
+        boolean showImage = true;
+        if (values.containsKey(KEY_SHOW_IMAGE)) {
+            showImage = parseBoolean(KEY_SHOW_IMAGE, values.get(KEY_SHOW_IMAGE));
+        }
+        return new OutputOptions(mode, imageFile, List.of(command.split("\\s+")), showImage);
+    }
+
+    /**
+     * Определяет режим вывода. Если параметра нет, печатается граф.
      */
     private OutputMode parseOutputMode(String value) throws ConfigException {
         if (value == null) {
@@ -140,7 +159,8 @@ public class ConfigReader {
         }
         OutputMode mode = OutputMode.fromKeyword(value);
         if (mode == null) {
-            throw new ConfigException(KEY_OUTPUT_MODE + ": нужно graph или load_order, а не '" + value + "'");
+            throw new ConfigException(KEY_OUTPUT_MODE + ": нужно одно из graph, load_order, d2, image, а не '"
+                    + value + "'");
         }
         return mode;
     }

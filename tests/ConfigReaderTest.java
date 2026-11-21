@@ -6,6 +6,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.List;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
@@ -78,7 +79,46 @@ class ConfigReaderTest {
 
     @Test
     void badOutputModeIsError() throws Exception {
-        assertError("graph или load_order", writeFile(ini("A", GOOD_URL, "false", "1.0") + "output_mode = list\n"));
+        assertError("нужно одно из", writeFile(ini("A", GOOD_URL, "false", "1.0") + "output_mode = list\n"));
+    }
+
+    @Test
+    void readsD2AndImageModes() throws Exception {
+        String d2 = writeFile(ini("A", GOOD_URL, "false", "1.0") + "output_mode = d2\n");
+        assertEquals(OutputMode.D2, new ConfigReader().read(d2).getOutputMode());
+        String image = writeFile(ini("A", GOOD_URL, "false", "1.0") + "output_mode = IMAGE\n");
+        assertEquals(OutputMode.IMAGE, new ConfigReader().read(image).getOutputMode());
+    }
+
+    @Test
+    void imageOptionsHaveDefaults() throws Exception {
+        OutputOptions options = new ConfigReader()
+                .read(writeFile(ini("A", GOOD_URL, "false", "1.0"))).getOutputOptions();
+        assertEquals("graph.svg", options.getImageFile());
+        assertEquals(List.of("d2"), options.getD2Command());
+        assertTrue(options.isShowImage());
+    }
+
+    @Test
+    void readsImageOptions() throws Exception {
+        String text = ini("A", GOOD_URL, "false", "1.0")
+                + "output_mode = image\nimage_file = out/pic.svg\nd2_command = java Fake.java\nshow_image = false\n";
+        OutputOptions options = new ConfigReader().read(writeFile(text)).getOutputOptions();
+        assertEquals("out/pic.svg", options.getImageFile());
+        assertEquals(List.of("java", "Fake.java"), options.getD2Command());
+        assertFalse(options.isShowImage());
+    }
+
+    @Test
+    void badShowImageIsError() throws Exception {
+        assertError("show_image: нужно true или false",
+                writeFile(ini("A", GOOD_URL, "false", "1.0") + "show_image = sometimes\n"));
+    }
+
+    @Test
+    void emptyOptionalValueIsError() throws Exception {
+        assertError("пустое значение параметра: image_file",
+                writeFile(ini("A", GOOD_URL, "false", "1.0") + "image_file =\n"));
     }
 
     @Test

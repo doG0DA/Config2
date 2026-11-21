@@ -1,7 +1,9 @@
+import java.nio.file.Path;
 import java.util.List;
 
 /**
- * Точка входа: читает настройки, строит граф зависимостей пакета и выводит его на экран.
+ * Точка входа: читает настройки, строит граф зависимостей пакета и выводит результат: граф,
+ * порядок загрузки, описание на языке D2 или картинку.
  */
 public class Main {
 
@@ -26,13 +28,15 @@ public class Main {
             fail("Ошибка конфигурации: " + e.getMessage());
         } catch (NuGetException e) {
             fail("Ошибка получения данных: " + e.getMessage());
+        } catch (RenderException e) {
+            fail("Ошибка построения картинки: " + e.getMessage());
         }
     }
 
     /**
      * Выбирает источник данных, строит граф и печатает результат.
      */
-    private static void run(Config config) throws ConfigException, NuGetException {
+    private static void run(Config config) throws ConfigException, NuGetException, RenderException {
         String name = config.getPackageName();
         PackageFilter filter = new PackageFilter(config.getFilterSubstring());
         if (filter.isExcluded(name)) {
@@ -43,10 +47,34 @@ public class Main {
         String rootVersion = config.isTestMode() ? "" : config.getPackageVersion();
         Dependency root = new Dependency(name, rootVersion);
         DependencyGraph graph = new GraphBuilder().build(source, root, filter);
-        if (config.getOutputMode() == OutputMode.LOAD_ORDER) {
-            printLoadOrder(graph, config, filter);
-        } else {
-            printGraph(graph, config, filter);
+        printResult(graph, config, filter);
+    }
+
+    /**
+     * Выводит результат в том режиме, который выбран в настройках.
+     */
+    private static void printResult(DependencyGraph graph, Config config, PackageFilter filter)
+            throws RenderException {
+        switch (config.getOutputMode()) {
+            case LOAD_ORDER -> printLoadOrder(graph, config, filter);
+            case D2 -> System.out.print(new D2Writer().write(graph, "Граф зависимостей пакета " + title(config)));
+            case IMAGE -> showImage(graph, config);
+            default -> printGraph(graph, config, filter);
+        }
+    }
+
+    /**
+     * Рисует картинку графа программой d2 и открывает её на экране.
+     */
+    private static void showImage(DependencyGraph graph, Config config) throws RenderException {
+        OutputOptions options = config.getOutputOptions();
+        ImageRenderer renderer = new ImageRenderer();
+        Path image = new ImageOutput(renderer).produce(graph, "Граф зависимостей пакета " + title(config), options);
+        System.out.println("Описание графа на языке D2: " + ImageOutput.d2PathFor(image));
+        System.out.println("Картинка графа (пакетов: " + graph.nodeCount() + ", связей: " + graph.edgeCount()
+                + "): " + image);
+        if (options.isShowImage() && !renderer.open(image)) {
+            System.out.println("Открыть картинку автоматически не удалось, откройте файл вручную.");
         }
     }
 

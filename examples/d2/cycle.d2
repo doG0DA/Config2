@@ -1,0 +1,22 @@
+# Граф зависимостей пакета A
+direction: right
+
+"A": {
+  label: "A"
+  style.fill: "#ffe8a3"
+}
+"B": "B"
+"C": "C"
+
+"A" -> "B": {
+  style.stroke: "#d62728"
+  style.stroke-dash: 4
+}
+"B" -> "C": {
+  style.stroke: "#d62728"
+  style.stroke-dash: 4
+}
+"C" -> "A": {
+  style.stroke: "#d62728"
+  style.stroke-dash: 4
+}

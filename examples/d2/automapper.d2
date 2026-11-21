@@ -1,0 +1,19 @@
+# Граф зависимостей пакета AutoMapper 12.0.1
+direction: right
+
+"AutoMapper": {
+  label: "AutoMapper\n12.0.1"
+  style.fill: "#ffe8a3"
+}
+"Microsoft.CSharp": "Microsoft.CSharp\n4.7.0"
+"NETStandard.Library": "NETStandard.Library\n1.6.1"
+"Microsoft.NETCore.Platforms": "Microsoft.NETCore.Platforms\n1.1.0"
+"Microsoft.Win32.Primitives": "Microsoft.Win32.Primitives\n4.3.0"
+"Microsoft.NETCore.Targets": "Microsoft.NETCore.Targets\n1.1.0"
+
+"AutoMapper" -> "Microsoft.CSharp"
+"Microsoft.CSharp" -> "NETStandard.Library"
+"NETStandard.Library" -> "Microsoft.NETCore.Platforms"
+"NETStandard.Library" -> "Microsoft.Win32.Primitives"
+"Microsoft.Win32.Primitives" -> "Microsoft.NETCore.Platforms"
+"Microsoft.Win32.Primitives" -> "Microsoft.NETCore.Targets"

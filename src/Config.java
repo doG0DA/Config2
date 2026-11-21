@@ -8,7 +8,7 @@ public class Config {
     private final boolean testMode;
     private final String packageVersion;
     private final String filterSubstring;
-    private final OutputMode outputMode;
+    private final OutputOptions output;
 
     /**
      * Создаёт набор настроек.
@@ -18,16 +18,16 @@ public class Config {
      * @param testMode        работаем ли с тестовым репозиторием
      * @param packageVersion  версия пакета
      * @param filterSubstring подстрока для фильтрации пакетов (может быть пустой)
-     * @param outputMode      что печатать: граф или порядок загрузки
+     * @param output          настройки вывода: что печатать, куда сохранять картинку
      */
     public Config(String packageName, String repository, boolean testMode,
-                  String packageVersion, String filterSubstring, OutputMode outputMode) {
+                  String packageVersion, String filterSubstring, OutputOptions output) {
         this.packageName = packageName;
         this.repository = repository;
         this.testMode = testMode;
         this.packageVersion = packageVersion;
         this.filterSubstring = filterSubstring;
-        this.outputMode = outputMode;
+        this.output = output;
     }
 
     /**
@@ -78,9 +78,18 @@ public class Config {
     /**
      * Возвращает режим вывода результата.
      *
-     * @return граф или порядок загрузки
+     * @return граф, порядок загрузки, текст D2 или картинка
      */
     public OutputMode getOutputMode() {
-        return outputMode;
+        return output.getMode();
+    }
+
+    /**
+     * Возвращает все настройки вывода.
+     *
+     * @return режим вывода, файл картинки, команда d2
+     */
+    public OutputOptions getOutputOptions() {
+        return output;
     }
 }

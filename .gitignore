@@ -12,3 +12,9 @@ out/
 *.jar
 .DS_Store
 Thumbs.db
+
+# Сгенерированные картинки графов
+/images/
+*.svg
+*.png
+/graph.d2
